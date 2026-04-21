@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, BufWriter, Seek, Write};
 
 use crate::asm::line::Line;
-use crate::asm::transform::process_line;
+use crate::asm::process_line;
 
 fn emit_header(writer: &mut BufWriter<File>) -> io::Result<()> {
     writer.write_all(b"# This file was generated automatically by the rarc tool. If this line has any lines above, DO NOT MODIFY THEM.\n")?;

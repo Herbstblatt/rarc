@@ -3,7 +3,7 @@ use std::io;
 
 use crate::asm::line::{Body, Line};
 
-pub(crate) fn process_line(
+pub(crate) fn transform_directives(
     line: Line,
     supported_directives: &[String],
 ) -> Result<Vec<Line>, io::Error> {
