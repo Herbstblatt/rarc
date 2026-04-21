@@ -81,15 +81,15 @@ fn xdg_config_candidates() -> Vec<PathBuf> {
 
 	if let Ok(config_home) = env::var("XDG_CONFIG_HOME") {
 		if !config_home.is_empty() {
-			candidates.push(PathBuf::from(config_home).join("asm-generator/config.toml"));
+			candidates.push(PathBuf::from(config_home).join("rarc/config.toml"));
 		}
 	} else if let Ok(home) = env::var("HOME") {
-		candidates.push(PathBuf::from(home).join(".config/asm-generator/config.toml"));
+		candidates.push(PathBuf::from(home).join(".config/rarc/config.toml"));
 	}
 
 	let config_dirs = env::var("XDG_CONFIG_DIRS").unwrap_or_else(|_| "/etc/xdg".to_string());
 	for dir in config_dirs.split(':').filter(|part| !part.is_empty()) {
-		candidates.push(PathBuf::from(dir).join("asm-generator/config.toml"));
+		candidates.push(PathBuf::from(dir).join("rarc/config.toml"));
 	}
 
 	candidates
