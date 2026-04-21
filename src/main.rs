@@ -5,6 +5,7 @@ use std::process::Command;
 use tempfile::tempdir;
 
 mod args;
+mod asm;
 mod config;
 mod process_file;
 use args::rewrite_output_args;
