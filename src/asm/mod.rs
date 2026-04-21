@@ -1,6 +1,7 @@
 use std::{collections::HashMap, io};
 
 pub mod line;
+pub mod supported_instructions;
 mod transform_directives;
 mod transform_labels;
 

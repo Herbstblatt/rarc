@@ -5,6 +5,7 @@ use std::io::{self, BufRead, BufReader, BufWriter, Seek, Write};
 
 use crate::asm::line::Line;
 use crate::asm::process_line;
+use crate::asm::supported_instructions::is_supported_instruction;
 
 fn emit_header(writer: &mut BufWriter<File>) -> io::Result<()> {
     writer.write_all(b"# This file was generated automatically by the rarc tool. If this line has any lines above, DO NOT MODIFY THEM.\n")?;
@@ -47,6 +48,11 @@ pub fn process_file(
     if labels.contains_key("main") {
         labels.insert("main".to_owned(), "__rarc_original_main".to_owned());
         emit_main(writer)?;
+    }
+    for (label, replacement) in labels.iter_mut() {
+        if is_supported_instruction(label) {
+            *replacement = "__rarc_original_".to_owned() + label;
+        }
     }
 
     reader.get_mut().seek(std::io::SeekFrom::Start(0))?;

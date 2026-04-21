@@ -2,6 +2,7 @@ use std::iter;
 use std::io;
 
 use crate::asm::line::{Body, Line};
+use crate::asm::supported_instructions::is_supported_instruction;
 
 pub(crate) fn transform_directives(
     line: Line,
@@ -11,6 +12,16 @@ pub(crate) fn transform_directives(
         return Ok(vec![line]);
     };
     if let Body::Instr { .. } = body {
+        let (name, _) = body.data_ref();
+        if !is_supported_instruction(name) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "Clang emitted unsupported instruction '{}' in line: '{}'",
+                    name, line.raw_content
+                ),
+            ));
+        }
         return Ok(vec![line]);
     }
 
