@@ -52,7 +52,7 @@ pub fn process_file(
     reader.get_mut().seek(std::io::SeekFrom::Start(0))?;
     for line in reader.lines() {
         let line = Line::new(line?);
-        for processed in process_line(line, supported_directives)? {
+        for processed in process_line(line, supported_directives, &labels)? {
             processed.emit(writer)?;
         }
     }

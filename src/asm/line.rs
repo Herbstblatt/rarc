@@ -15,6 +15,13 @@ impl Body {
             Body::Instr { name, args } => (name, args),
         }
     }
+
+    pub(crate) fn data_ref_mut(&mut self) -> (&mut str, &mut [String]) {
+        match self {
+            Body::Directive { name, args } => (name, args),
+            Body::Instr { name, args } => (name, args),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
