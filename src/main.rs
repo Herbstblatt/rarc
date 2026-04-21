@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     if rarc_args.output_exact {
         io::copy(&mut reader, &mut writer)?;
     } else {
-        process_file(reader, writer, &config.supported_directives)?;
+        process_file(&mut reader, &mut writer, &config.supported_directives)?;
     }
 
     Ok(())
