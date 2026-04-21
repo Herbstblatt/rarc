@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{self, BufReader, BufWriter};
 use std::process::Command;
 use tempfile::tempdir;
 
@@ -16,11 +16,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dir = tempdir()?;
 
     let cli_args: Vec<String> = std::env::args().skip(1).collect();
-    let (args, out_path) = rewrite_output_args(cli_args, dir.path(), &config.default_out_name)?;
+    let (clang_args, rarc_args) = rewrite_output_args(cli_args, dir.path(), &config.default_out_name)?;
 
     let status = Command::new(&config.compiler_path)
         .args(&config.clang_args)
-        .args(&args)
+        .args(&clang_args)
         .status()
         .expect("Failed to launch clang compiler");
 
@@ -28,12 +28,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Err("Compilation failed".into());
     }
 
-    let generated_file = File::open(dir.path().join(&out_path))?;
-    let reader = BufReader::new(generated_file);
-    let target_file = File::create(&out_path)?;
-    let writer = BufWriter::new(target_file);
+    let generated_file = File::open(dir.path().join(&rarc_args.out_path))?;
+    let mut reader = BufReader::new(generated_file);
 
-    process_file(reader, writer, &config.supported_directives)?;
+    let target_file = File::create(&rarc_args.out_path)?;
+    let mut writer = BufWriter::new(target_file);
+
+    if rarc_args.output_exact {
+        io::copy(&mut reader, &mut writer)?;
+    } else {
+        process_file(reader, writer, &config.supported_directives)?;
+    }
 
     Ok(())
 }
