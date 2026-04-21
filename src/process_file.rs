@@ -12,7 +12,7 @@ pub fn process_file(
 ) -> Result<(), Box<dyn Error>> {
     for line in reader.lines() {
         let line = Line::new(line?);
-        for processed in process_line(line, supported_directives) {
+        for processed in process_line(line, supported_directives)? {
             processed.emit(&mut writer)?;
         }
     }

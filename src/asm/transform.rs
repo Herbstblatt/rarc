@@ -1,49 +1,66 @@
 use std::iter;
+use std::io;
 
 use crate::asm::line::{Body, Line};
 
-pub(crate) fn process_line(line: Line, supported_directives: &[String]) -> Vec<Line> {
+pub(crate) fn process_line(
+    line: Line,
+    supported_directives: &[String],
+) -> Result<Vec<Line>, io::Error> {
     let Some(body) = line.body.as_ref() else {
-        return vec![line];
+        return Ok(vec![line]);
     };
     if let Body::Instr { .. } = body {
-        return vec![line];
+        return Ok(vec![line]);
     }
 
     let (name, args) = body.data_ref();
     if supported_directives.iter().any(|d| d == name) {
-        return vec![line];
+        return Ok(vec![line]);
     }
 
     match name {
-        ".bss" => {
-            vec![Line {
+        ".bss" => Ok(vec![Line {
                 body: Some(Body::Directive {
                     name: ".data".to_owned(),
                     args: args.to_vec(),
                 }),
                 ..line
-            }]
-        }
+            }]),
         ".section" => {
-            let section_name = args.first().expect("Section has a name");
+            let section_name = args.first().ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Directive .section requires an argument: '{}'", line.raw_content),
+                )
+            })?;
             if section_name.starts_with(".rodata") {
-                return vec![Line {
+                return Ok(vec![Line {
                     body: Some(Body::Directive {
                         name: ".data".to_owned(),
                         args: vec![],
                     }),
                     ..line
-                }];
+                }]);
             }
-            vec![]
+            Ok(vec![])
         }
         ".zero" => {
             let mut arg: i32 = args
                 .first()
-                .expect("Should have an argument")
+                .ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("Directive .zero requires an integer argument: '{}'", line.raw_content),
+                    )
+                })?
                 .parse()
-                .expect("Argument should be an int");
+                .map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("Directive .zero argument must be an integer: '{}'", line.raw_content),
+                    )
+                })?;
 
             let ident = line.ident.clone();
             let mut new_lines: Vec<Line> = Vec::new();
@@ -84,25 +101,38 @@ pub(crate) fn process_line(line: Line, supported_directives: &[String]) -> Vec<L
                 });
             }
 
-            new_lines
+            Ok(new_lines)
         }
         ".p2align" => {
             let arg: i32 = args
                 .first()
-                .expect("Should have an argument")
+                .ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("Directive .p2align requires an integer argument: '{}'", line.raw_content),
+                    )
+                })?
                 .parse()
-                .expect("Argument should be an int");
+                .map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("Directive .p2align argument must be an integer: '{}'", line.raw_content),
+                    )
+                })?;
             if arg > 3 {
-                return vec![];
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Unsupported .p2align value {} in line: '{}'", arg, line.raw_content),
+                ));
             }
-            vec![Line {
+            Ok(vec![Line {
                 body: Some(Body::Directive {
                     name: ".align".to_owned(),
                     args: vec![arg.to_string()],
                 }),
                 ..line
-            }]
+            }])
         }
-        _ => vec![],
+        _ => Ok(vec![]),
     }
 }
