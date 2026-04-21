@@ -157,6 +157,7 @@ impl Line {
                                 .parse()
                                 .expect("Argument should be an int");
 
+                let ident = self.ident.clone();
                 let mut new_lines: Vec<Line> = Vec::new();
                 let mut extend_iter = iter::once(self).chain(
                     iter::repeat_with(|| Line::default())
@@ -167,6 +168,7 @@ impl Line {
                         body: Some(
                             Body::Directive { name: ".word".to_owned(), args: vec!["0".to_owned()] }
                         ),
+                        ident: ident.clone(),
                         ..extend_iter.next().unwrap()
                     });
                 }
@@ -177,6 +179,7 @@ impl Line {
                         body: Some(
                             Body::Directive { name: ".half".to_owned(), args: vec!["0".to_owned()] }
                         ),
+                        ident: ident.clone(),
                         ..extend_iter.next().unwrap()
                     });
                 }
@@ -187,9 +190,12 @@ impl Line {
                         body: Some(
                             Body::Directive { name: ".half".to_owned(), args: vec!["0".to_owned()] }
                         ),
+                        ident: ident.clone(),
                         ..extend_iter.next().unwrap()
                     });
                 }
+
+                return new_lines;
             },
             ".p2align" => {
                 let arg: i32 = args.get(0)
