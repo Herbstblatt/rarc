@@ -9,6 +9,7 @@ pub struct Config {
 	pub clang_args: Vec<String>,
 	pub supported_directives: Vec<String>,
 	pub default_out_name: String,
+	pub include_paths: Vec<String>
 }
 
 fn string_vec(items: &[&str]) -> Vec<String> {
@@ -21,6 +22,7 @@ struct PartialConfig {
 	clang_args: Option<Vec<String>>,
 	supported_directives: Option<Vec<String>>,
 	default_out_name: Option<String>,
+	include_paths: Option<Vec<String>>
 }
 
 impl Default for Config {
@@ -57,6 +59,11 @@ impl Default for Config {
                 ".word"
 			]),
 			default_out_name: "out.s".into(),
+			include_paths: string_vec(&[
+				"/usr/include/rars",
+				"/usr/local/include/rars",
+				"~/.local/include/rars"
+			])
 		}
 	}
 }
@@ -107,6 +114,9 @@ fn apply_overlay(config: &mut Config, overlay: PartialConfig) {
 	}
 	if let Some(value) = overlay.default_out_name {
 		config.default_out_name = value;
+	}
+	if let Some(value) = overlay.include_paths {
+		config.include_paths.extend(value);
 	}
 }
 

@@ -17,11 +17,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dir = tempdir()?;
 
     let cli_args: Vec<String> = std::env::args().skip(1).collect();
-    let (clang_args, rarc_args) = rewrite_output_args(cli_args, dir.path(), &config.default_out_name)?;
+    let (clang_args, rarc_args) = rewrite_output_args(cli_args, dir.path(), &config)?;
 
+    if rarc_args.verbose {
+        println!("Running clang {} {}", &clang_args.join(" "), &config.clang_args.join(" "))
+    }
     let status = Command::new(&config.compiler_path)
-        .args(&config.clang_args)
         .args(&clang_args)
+        .args(&config.clang_args)
         .status()
         .expect("Failed to launch clang compiler");
 
