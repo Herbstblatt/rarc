@@ -2,6 +2,7 @@ use std::{collections::HashMap, io};
 
 pub mod line;
 pub mod supported_instructions;
+pub mod transform_reloc;
 mod transform_directives;
 mod transform_labels;
 

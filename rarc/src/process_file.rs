@@ -6,6 +6,7 @@ use std::io::{self, BufRead, BufReader, BufWriter, Seek, Write};
 use crate::asm::line::Line;
 use crate::asm::process_line;
 use crate::asm::supported_instructions::is_supported_instruction;
+use crate::asm::transform_reloc;
 
 fn emit_header(writer: &mut BufWriter<File>) -> io::Result<()> {
     writer.write_all(b"# This file was generated automatically by the rarc tool. If this line has any lines above, DO NOT MODIFY THEM.\n")?;
@@ -56,11 +57,18 @@ pub fn process_file(
     }
 
     reader.get_mut().seek(std::io::SeekFrom::Start(0))?;
+    let mut normalized_lines: Vec<Line> = Vec::new();
     for line in reader.lines() {
         let line = Line::new(line?);
         for processed in process_line(line, supported_directives, &labels)? {
-            processed.emit(writer)?;
+            normalized_lines.push(processed);
         }
+    }
+
+    transform_reloc::normalize_hi_lo_pairs(&mut normalized_lines);
+
+    for line in normalized_lines {
+        line.emit(writer)?;
     }
 
     writer.flush()?;
