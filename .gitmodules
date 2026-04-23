@@ -1,0 +1,3 @@
+[submodule "nolibc-rars"]
+	path = nolibc-rars
+	url = https://github.com/Herbstblatt/nolibc-rars
