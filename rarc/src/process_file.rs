@@ -5,6 +5,7 @@ use std::io::{self, BufRead, BufReader, BufWriter, Seek, Write};
 
 use crate::asm::line::Line;
 use crate::asm::process_line;
+use crate::asm::symbol::Symbol;
 use crate::asm::supported_instructions::is_supported_instruction;
 use crate::asm::transform_reloc;
 
@@ -36,23 +37,36 @@ pub fn process_file(
     writer: &mut BufWriter<File>,
     supported_directives: &[String],
 ) -> Result<(), Box<dyn Error>> {
-    let mut labels: HashMap<String, String> = HashMap::new();
+    let mut labels: HashMap<String, Symbol> = HashMap::new();
 
     for line in reader.lines() {
         let line = Line::new(line?);
         if let Some(label) = &line.label {
-            labels.insert(label.clone(), label.clone());
+            labels.entry(label.clone())
+                  .or_insert_with(|| Symbol::new(label.clone()));
+        }
+
+        if let Some(body) = line.body {
+            let (name, args) = body.into_data();
+            if name == ".local" {
+                for local_name in args {
+                    let local_symbol = labels
+                        .entry(local_name.clone())
+                        .or_insert_with(|| Symbol::new(local_name));
+                    local_symbol.is_local = true;
+                }
+            }
         }
     }
 
     emit_header(writer)?;
     if labels.contains_key("main") {
-        labels.insert("main".to_owned(), "__rarc_original_main".to_owned());
+        labels.insert("main".to_owned(), Symbol::new("__rarc_original_main".to_owned()));
         emit_main(writer)?;
     }
     for (label, replacement) in labels.iter_mut() {
         if is_supported_instruction(label) {
-            *replacement = "__rarc_original_".to_owned() + label;
+            *replacement = Symbol::new("__rarc_original_".to_owned() + label);
         }
     }
 

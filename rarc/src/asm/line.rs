@@ -1,6 +1,17 @@
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
-use std::iter;
+
+pub(crate) fn split_asm_args<'a, I>(args: I) -> Vec<String>
+where
+    I: IntoIterator<Item = &'a str>,
+{
+    args.into_iter()
+        .flat_map(|arg| arg.split(','))
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .map(str::to_owned)
+        .collect()
+}
 
 #[derive(Debug)]
 pub(crate) enum Body {
@@ -9,6 +20,13 @@ pub(crate) enum Body {
 }
 
 impl Body {
+    pub(crate) fn into_data(self) -> (String, Vec<String>) {
+        match self {
+            Body::Directive { name, args } => (name, args),
+            Body::Instr { name, args } => (name, args),
+        }
+    }
+
     pub(crate) fn data_ref(&self) -> (&str, &[String]) {
         match self {
             Body::Directive { name, args } => (name, args),
@@ -63,15 +81,30 @@ impl Line {
                 arg_content = arg_content
                     .strip_prefix('#')
                     .expect("Content starts with #");
-                line.comment = Some(iter::once(arg_content).chain(args).collect::<Vec<_>>().join(" "));
+                let mut comment = vec![arg_content];
+                comment.extend(args);
+                line.comment = Some(comment.join(" "));
                 return line;
             }
 
-            let rest: Vec<String> = args
-                .by_ref()
-                .take_while(|x| !x.starts_with('#'))
-                .map(|x| x.strip_suffix(',').unwrap_or(x).to_string())
-                .collect();
+            let mut raw_args: Vec<&str> = Vec::new();
+            let mut comment: Vec<&str> = Vec::new();
+            let mut in_comment = false;
+            for token in args {
+                if !in_comment && token.starts_with('#') {
+                    in_comment = true;
+                    comment.push(token.strip_prefix('#').expect("Token starts with #"));
+                    continue;
+                }
+
+                if in_comment {
+                    comment.push(token);
+                } else {
+                    raw_args.push(token);
+                }
+            }
+
+            let rest = split_asm_args(raw_args.iter().copied());
             if arg_content.starts_with('.') {
                 line.body = Some(Body::Directive {
                     name: arg_content.to_string(),
@@ -84,7 +117,7 @@ impl Line {
                 })
             }
 
-            line.comment = Some(args.collect::<Vec<_>>().join(" ")).filter(|s| !s.is_empty());
+            line.comment = Some(comment.join(" ")).filter(|s| !s.is_empty());
         }
 
         line

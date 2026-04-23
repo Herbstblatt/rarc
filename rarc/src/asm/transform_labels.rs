@@ -2,12 +2,13 @@ use std::collections::HashMap;
 use std::io;
 
 use crate::asm::line::Line;
+use crate::asm::symbol::Symbol;
 
 fn is_label_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '$'
 }
 
-fn replace_labels_in_arg(arg: &str, labels: &HashMap<String, String>) -> String {
+fn replace_labels_in_arg(arg: &str, labels: &HashMap<String, Symbol>) -> String {
     let mut out = String::with_capacity(arg.len());
     let mut token = String::new();
 
@@ -19,7 +20,7 @@ fn replace_labels_in_arg(arg: &str, labels: &HashMap<String, String>) -> String 
 
         if !token.is_empty() {
             if let Some(replacement) = labels.get(&token) {
-                out.push_str(replacement);
+                out.push_str(&replacement.name);
             } else {
                 out.push_str(&token);
             }
@@ -31,7 +32,7 @@ fn replace_labels_in_arg(arg: &str, labels: &HashMap<String, String>) -> String 
 
     if !token.is_empty() {
         if let Some(replacement) = labels.get(&token) {
-            out.push_str(replacement);
+            out.push_str(&replacement.name);
         } else {
             out.push_str(&token);
         }
@@ -42,16 +43,16 @@ fn replace_labels_in_arg(arg: &str, labels: &HashMap<String, String>) -> String 
 
 pub(crate) fn transform_labels(
     mut line: Line,
-    labels: &HashMap<String, String>,
+    symbols: &HashMap<String, Symbol>,
 ) -> Result<Line, io::Error> {
     line.label = line.label.map(|label| {
-        labels.get(&label).map(String::clone).unwrap_or(label)
+        symbols.get(&label).map(|s| s.name.clone()).unwrap_or(label)
     });
 
     if let Some(body) = line.body.as_mut() {
         let (_, args) = body.data_ref_mut();
         for arg in args.iter_mut() {
-            *arg = replace_labels_in_arg(arg, labels);
+            *arg = replace_labels_in_arg(arg, symbols);
         }
     }
 
