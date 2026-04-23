@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Err("Compilation failed".into());
     }
 
-    let generated_file = File::open(dir.path().join(&rarc_args.out_path))?;
+    let generated_file = File::open(&rarc_args.generated_path)?;
     let mut reader = BufReader::new(generated_file);
 
     let target_file = File::create(&rarc_args.out_path)?;

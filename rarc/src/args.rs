@@ -1,11 +1,12 @@
 use std::io;
 use std::io::ErrorKind;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::config::Config;
 
 pub struct Args {
     pub out_path: String,
+    pub generated_path: PathBuf,
     pub output_exact: bool,
     pub verbose: bool
 }
@@ -16,6 +17,7 @@ pub fn rewrite_output_args(
     config: &Config,
 ) -> io::Result<(Vec<String>, Args)> {
     let mut out_path: Option<String> = None;
+    let mut generated_path: Option<PathBuf> = None;
     let mut output_exact = false;
     let mut verbose = false;
 
@@ -28,9 +30,17 @@ pub fn rewrite_output_args(
             verbose = true;
         } else if item == "-o" {
             if let Some(path) = iter.next() {
-                out_path = Some(path.clone());
-                *path = base_dir
-                    .join(&*path)
+                let requested_out_path = path.clone();
+                out_path = Some(requested_out_path.clone());
+
+                let temp_file_name = Path::new(&requested_out_path)
+                    .file_name()
+                    .map(|name| name.to_owned())
+                    .unwrap_or_else(|| config.default_out_name.as_str().into());
+                let rewritten_path = base_dir.join(temp_file_name);
+                generated_path = Some(rewritten_path.clone());
+
+                *path = rewritten_path
                     .to_str()
                     .expect("Path should contain valid unicode")
                     .to_string();
@@ -49,18 +59,17 @@ pub fn rewrite_output_args(
 
     let out_path = out_path.unwrap_or_else(|| {
         args.push("-o".into());
-        args.push(
-            base_dir
-                .join(&config.default_out_name)
-                .to_str()
-                .expect("Path should contain valid unicode")
-                .to_string(),
-        );
+        let default_generated = base_dir.join(&config.default_out_name);
+        generated_path = Some(default_generated.clone());
+        args.push(default_generated.to_str().expect("Path should contain valid unicode").to_string());
         config.default_out_name.clone()
     });
 
+    let generated_path = generated_path.expect("Generated output path should always be set");
+
     let rarc_args = Args {
         out_path: out_path,
+        generated_path,
         output_exact: output_exact,
         verbose: verbose
     };

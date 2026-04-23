@@ -297,3 +297,99 @@ pub(crate) fn transform_directives(
         _ => Ok(vec![]),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::transform_directives;
+    use crate::asm::line::{Body, Line};
+    use crate::asm::symbol::Symbol;
+    use std::collections::HashMap;
+
+    fn supported_directives() -> Vec<String> {
+        vec![
+            ".ascii".to_owned(),
+            ".asciz".to_owned(),
+            ".byte".to_owned(),
+            ".data".to_owned(),
+            ".double".to_owned(),
+            ".end_macro".to_owned(),
+            ".eqv".to_owned(),
+            ".extern".to_owned(),
+            ".float".to_owned(),
+            ".globl".to_owned(),
+            ".half".to_owned(),
+            ".include".to_owned(),
+            ".macro".to_owned(),
+            ".space".to_owned(),
+            ".string".to_owned(),
+            ".text".to_owned(),
+            ".word".to_owned(),
+        ]
+    }
+
+    fn directive_parts(line: &Line) -> (&str, &[String]) {
+        let body = line.body.as_ref().expect("line should have a body");
+        match body {
+            Body::Directive { name, args } => (name.as_str(), args.as_slice()),
+            Body::Instr { .. } => panic!("expected directive body"),
+        }
+    }
+
+    #[test]
+    fn section_rodata_is_moved_to_data() {
+        let symbols = HashMap::<String, Symbol>::new();
+        let input = Line::new("\t.section .rodata.str1.1, \"aMS\", @progbits, 1".to_owned());
+
+        let out = transform_directives(input, &supported_directives(), &symbols)
+            .expect(".section rewrite should succeed");
+
+        assert_eq!(out.len(), 1);
+        let (name, args) = directive_parts(&out[0]);
+        assert_eq!(name, ".data");
+        assert!(args.is_empty());
+    }
+
+    #[test]
+    fn comm_transforms_into_data_symbol_and_zero_fill() {
+        let symbols = HashMap::<String, Symbol>::new();
+        let input = Line::new("\t.comm global_buf, 6, 4".to_owned());
+
+        let out = transform_directives(input, &supported_directives(), &symbols)
+            .expect(".comm rewrite should succeed");
+
+        assert_eq!(out.len(), 6);
+        assert_eq!(directive_parts(&out[0]).0, ".data");
+
+        let (globl_name, globl_args) = directive_parts(&out[1]);
+        assert_eq!(globl_name, ".globl");
+        assert_eq!(globl_args, ["global_buf"]);
+
+        let (align_name, align_args) = directive_parts(&out[2]);
+        assert_eq!(align_name, ".align");
+        assert_eq!(align_args, ["2"]);
+
+        assert_eq!(out[3].label.as_deref(), Some("global_buf"));
+
+        let (fill0_name, fill0_args) = directive_parts(&out[4]);
+        assert_eq!(fill0_name, ".word");
+        assert_eq!(fill0_args, ["0"]);
+
+        let (fill1_name, fill1_args) = directive_parts(&out[5]);
+        assert_eq!(fill1_name, ".half");
+        assert_eq!(fill1_args, ["0"]);
+    }
+
+    #[test]
+    fn p2align_is_rewritten_to_align() {
+        let symbols = HashMap::<String, Symbol>::new();
+        let input = Line::new("\t.p2align 3".to_owned());
+
+        let out = transform_directives(input, &supported_directives(), &symbols)
+            .expect(".p2align rewrite should succeed");
+
+        assert_eq!(out.len(), 1);
+        let (name, args) = directive_parts(&out[0]);
+        assert_eq!(name, ".align");
+        assert_eq!(args, ["3"]);
+    }
+}

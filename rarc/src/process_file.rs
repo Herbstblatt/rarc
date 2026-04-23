@@ -70,7 +70,7 @@ pub fn process_file(
         }
     }
 
-    reader.get_mut().seek(std::io::SeekFrom::Start(0))?;
+    reader.seek(std::io::SeekFrom::Start(0))?;
     let mut normalized_lines: Vec<Line> = Vec::new();
     for line in reader.lines() {
         let line = Line::new(line?);
