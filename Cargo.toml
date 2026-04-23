@@ -1,0 +1,3 @@
+[workspace]
+members = ["rarc", "integration-tests"]
+resolver = "2"

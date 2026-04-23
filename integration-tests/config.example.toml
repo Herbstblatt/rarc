@@ -1,0 +1,25 @@
+# Path to rarc executable. Default: "rarc" from PATH.
+rarc_bin = "rarc"
+
+# Path to java executable. Default: "java" from PATH.
+java_bin = "java"
+
+# Required for mode="assemble" and mode="run" cases.
+rars_jar = "/absolute/path/to/rars.jar"
+
+# Optional: path to an XDG config home directory consumed by rarc.
+# The harness copies this directory into each test workdir and runs rarc with
+# XDG_CONFIG_HOME pointing at that copied tree.
+# Example directory layout:
+#   <this_dir>/rarc/config.toml
+# Relative paths are resolved from integration-tests/.
+rarc_xdg_config_home = "rarc_config"
+
+# temp | keep. Keep stores artifacts under target/integration-workdir.
+work_dir = "temp"
+
+# If true, mode="asm" tests rewrite expected_asm snapshots.
+update_snapshots = false
+
+# Per-command timeout in milliseconds.
+default_timeout_ms = 20000

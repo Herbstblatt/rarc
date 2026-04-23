@@ -1,0 +1,14 @@
+mode = "asm"
+
+[asm]
+must_contain = [
+  ".globl main",
+  "main:",
+  "call __rarc_original_main",
+  ".globl __rarc_original_main",
+  "__rarc_original_main:",
+]
+must_not_contain = []
+ignore_ident = true
+ignore_comments = true
+strict_compare = false
