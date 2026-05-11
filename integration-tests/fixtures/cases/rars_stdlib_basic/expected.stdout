@@ -1,0 +1,17 @@
+abs=7
+labs=123456
+llabs=9000000000
+atol=-42
+atoi=17
+utoa_r=12345
+itoa_r=-678
+u64toa_r=1234567890123456789
+i64toa_r=-1234567890123
+utoh_r=2a
+u64toh_r=1234abcd5678ef00
+strtol=0, end=0x2c
+strtoul=493, end=0x78
+strtoull=255, end=0x7a
+strtol_base=0, errno=22, end=0x31
+strtoll_overflow=9223372036854775807, errno=0
+strtoumax=42, end=0x0
