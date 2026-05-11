@@ -1,0 +1,7 @@
+mode = "run"
+expected_success = true
+expected_exit_code = 0
+stdin = "stdin.txt"
+
+[args]
+clang = []

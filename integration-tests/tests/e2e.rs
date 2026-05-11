@@ -2,6 +2,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::time::Duration;
@@ -72,6 +73,7 @@ struct CaseFile {
     input: Option<String>,
     expected_asm: Option<String>,
     expected_stdout: Option<String>,
+    stdin: Option<String>,
     expected_exit_code: Option<i32>,
     expected_success: Option<bool>,
     timeout_ms: Option<u64>,
@@ -88,6 +90,7 @@ struct Case {
     input: PathBuf,
     expected_asm: PathBuf,
     expected_stdout: PathBuf,
+    stdin: Option<PathBuf>,
     expected_exit_code: Option<i32>,
     expected_success: bool,
     timeout_ms: Option<u64>,
@@ -303,6 +306,7 @@ fn discover_cases(fixtures_root: &Path) -> Result<Vec<Case>> {
         let expected_asm = dir.join(parsed.expected_asm.unwrap_or_else(|| "expected.s".to_string()));
         let expected_stdout =
             dir.join(parsed.expected_stdout.unwrap_or_else(|| "expected.stdout".to_string()));
+        let stdin = parsed.stdin.map(|name| dir.join(name));
 
         cases.push(Case {
             name: case_name,
@@ -310,6 +314,7 @@ fn discover_cases(fixtures_root: &Path) -> Result<Vec<Case>> {
             input,
             expected_asm,
             expected_stdout,
+            stdin,
             expected_exit_code: parsed.expected_exit_code,
             expected_success: parsed.expected_success.unwrap_or(true),
             timeout_ms: parsed.timeout_ms,
@@ -359,7 +364,13 @@ fn run_case(cfg: &HarnessConfig, workspace_root: &Path, case: &Case) -> Result<C
                 )));
             }
 
-            let result = run_rars(cfg, case, rars_jar, &output_asm, timeout)?;
+            let stdin_data = match (&case.mode, &case.stdin) {
+                (CaseMode::Run, Some(path)) => Some(fs::read(path).with_context(|| {
+                    format!("failed to read stdin data {}", path.display())
+                })?),
+                _ => None,
+            };
+            let result = run_rars(cfg, case, rars_jar, &output_asm, timeout, stdin_data)?;
             let success = result.status.success();
             if success != case.expected_success {
                 bail!(
@@ -470,7 +481,7 @@ fn run_rarc(
         .env("XDG_CONFIG_HOME", &xdg_home)
         .env("XDG_CONFIG_DIRS", &xdg_dirs);
 
-    let result = run_command_with_timeout(&mut cmd, timeout)
+    let result = run_command_with_timeout(&mut cmd, timeout, None)
         .with_context(|| format!("failed to execute rarc for {}", case.name))?;
     if !result.status.success() {
         bail!(
@@ -490,6 +501,7 @@ fn run_rars(
     rars_jar: &Path,
     output_asm: &Path,
     timeout: Duration,
+    stdin_data: Option<Vec<u8>>,
 ) -> Result<CommandOutput> {
     let mut cmd = Command::new(&cfg.java_bin);
     cmd.arg("-jar").arg(rars_jar);
@@ -503,7 +515,7 @@ fn run_rars(
 
     cmd.args(args).arg(output_asm);
 
-    run_command_with_timeout(&mut cmd, timeout)
+    run_command_with_timeout(&mut cmd, timeout, stdin_data.as_deref())
         .with_context(|| format!("failed to execute RARS for {}", case.name))
 }
 
@@ -538,12 +550,29 @@ fn copy_dir_recursive(source: &Path, target: &Path) -> Result<()> {
     Ok(())
 }
 
-fn run_command_with_timeout(cmd: &mut Command, timeout: Duration) -> Result<CommandOutput> {
+fn run_command_with_timeout(
+    cmd: &mut Command,
+    timeout: Duration,
+    stdin_data: Option<&[u8]>,
+) -> Result<CommandOutput> {
     let mut child = cmd
+        .stdin(if stdin_data.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
         .context("failed to spawn child process")?;
+
+    if let Some(data) = stdin_data {
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(data)
+                .context("failed to write stdin data")?;
+        }
+    }
 
     match child.wait_timeout(timeout).context("wait_timeout failed")? {
         Some(_) => {
@@ -648,7 +677,16 @@ fn normalize_asm(input: &str, ignore_ident: bool, ignore_comments: bool) -> Stri
 }
 
 fn normalize_output(input: &str) -> String {
-    input.replace("\r\n", "\n")
+    let normalized = input.replace("\r\n", "\n");
+    let mut lines = normalized
+        .lines()
+        .filter(|line| line.trim_end() != "Program terminated by calling exit")
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    while matches!(lines.last(), Some(line) if line.trim().is_empty()) {
+        lines.pop();
+    }
+    lines.join("\n")
 }
 
 fn sanitize_case_name(name: &str) -> String {

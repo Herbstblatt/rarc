@@ -14,6 +14,8 @@ fn parse_lo_mem_reloc(arg: &str) -> Option<(&str, &str)> {
 }
 
 pub fn normalize_hi_lo_pairs(lines: &mut [Line]) {
+    const MAX_LOOKAHEAD: usize = 3;
+
     for idx in 0..lines.len().saturating_sub(1) {
         let Some(curr_body) = lines[idx].body.as_ref() else {
             continue;
@@ -28,18 +30,34 @@ pub fn normalize_hi_lo_pairs(lines: &mut [Line]) {
             continue;
         };
 
-        let Some(next_body) = lines[idx + 1].body.as_mut() else {
-            continue;
-        };
-        let (_, next_args) = next_body.data_ref_mut();
-
         let mut replaced = false;
-        for arg in next_args.iter_mut() {
-            if let Some((lo_symbol, lo_reg)) = parse_lo_mem_reloc(arg) {
-                if lo_symbol == symbol && lo_reg == reg {
-                    *arg = format!("0({reg})");
-                    replaced = true;
+        let mut steps = 0usize;
+        for next_idx in (idx + 1)..lines.len() {
+            if lines[next_idx].label.is_some() {
+                break;
+            }
+            if steps >= MAX_LOOKAHEAD {
+                break;
+            }
+            steps += 1;
+
+            let Some(next_body) = lines[next_idx].body.as_mut() else {
+                continue;
+            };
+            let (_, next_args) = next_body.data_ref_mut();
+
+            for arg in next_args.iter_mut() {
+                if let Some((lo_symbol, lo_reg)) = parse_lo_mem_reloc(arg) {
+                    if lo_symbol == symbol && lo_reg == reg {
+                        *arg = format!("0({reg})");
+                        replaced = true;
+                        break;
+                    }
                 }
+            }
+
+            if replaced {
+                break;
             }
         }
 
