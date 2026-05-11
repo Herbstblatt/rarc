@@ -1,0 +1,6 @@
+buf1=ABCDEFGHIJKLMNO
+malloc2=ok
+buf2=hi
+calloc_zero=1
+buf3=hi!
+buf4=hi!
