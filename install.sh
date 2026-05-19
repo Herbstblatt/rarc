@@ -175,12 +175,9 @@ install_binary() {
     log_info "Extracting archive..."
     tar -xzf "$archive" -C "$tmpdir"
     
-    # Find the binary (could be at different paths depending on archive structure)
     local binary
-    if [ -f "$tmpdir/rarc" ]; then
-        binary="$tmpdir/rarc"
-    elif [ -f "$tmpdir/bin/rarc" ]; then
-        binary="$tmpdir/bin/rarc"
+    if [ -f "$tmpdir/rarc-dist/bin/rarc" ]; then
+        binary="$tmpdir/rarc-dist/bin/rarc"
     else
         log_error "Could not find rarc binary in archive"
         exit 1
