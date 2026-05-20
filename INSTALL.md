@@ -48,7 +48,7 @@ make install PREFIX=/opt/rarc
 **Advantages:**
 - Fast and simple
 - No compilation required
-- Cross-platform support (Linux x86_64, Linux aarch64, Linux armv7, macOS)
+- Cross-platform support (Linux x86_64, macOS x86_64)
 
 **Requirements:**
 - `curl` or `wget`
@@ -225,8 +225,8 @@ The installation script auto-detects your system and downloads the appropriate b
 
 | OS      | Architectures       |
 |---------|-------------------|
-| Linux   | x86_64, aarch64, armv7 |
-| macOS   | x86_64, aarch64   |
+| Linux   | x86_64 |
+| macOS   | x86_64 |
 
 For unsupported architectures, build from source.
 

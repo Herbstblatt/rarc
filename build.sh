@@ -78,14 +78,9 @@ get_arch() {
         x86_64)
             echo "x86_64"
             ;;
-        aarch64|arm64)
-            echo "aarch64"
-            ;;
-        armv7l|armv7)
-            echo "armv7"
-            ;;
         *)
-            echo "unknown"
+            log_error "Unsupported architecture: $(uname -m)"
+            exit 1
             ;;
     esac
 }
@@ -165,10 +160,7 @@ main() {
         
         local targets=(
             "x86_64-unknown-linux-gnu"
-            "aarch64-unknown-linux-gnu"
-            "armv7-unknown-linux-gnueabihf"
             "x86_64-apple-darwin"
-            "aarch64-apple-darwin"
         )
         
         for target in "${targets[@]}"; do
@@ -180,7 +172,7 @@ main() {
             
             # For cross-compilation, check if cross is available
             if [[ "$target" == *"gnu"* ]] || [[ "$target" == *"darwin"* ]]; then
-                if ! echo "$target" | grep -q "$(rustup target list --installed | grep -E 'x86_64-unknown-linux|aarch64-unknown-linux|armv7-unknown-linux|.*-apple-darwin')"; then
+                if ! echo "$target" | grep -q "$(rustup target list --installed | grep -E 'x86_64-unknown-linux|.*-apple-darwin')"; then
                     log_warn "Skipping $target (requires cross-compilation setup)"
                     continue
                 fi
@@ -219,10 +211,9 @@ main() {
         
         if [[ "$TARGET" == *"x86_64"* ]]; then
             arch="x86_64"
-        elif [[ "$TARGET" == *"aarch64"* ]]; then
-            arch="aarch64"
-        elif [[ "$TARGET" == *"armv7"* ]]; then
-            arch="armv7"
+        else
+            log_error "Unsupported target architecture in: $TARGET"
+            exit 1
         fi
         
         create_archive "$TARGET" "$os" "$arch"

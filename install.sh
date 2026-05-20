@@ -98,12 +98,6 @@ detect_arch() {
         x86_64)
             echo "x86_64"
             ;;
-        aarch64|arm64)
-            echo "aarch64"
-            ;;
-        armv7l|armv7)
-            echo "armv7"
-            ;;
         *)
             log_error "Unsupported architecture: $arch"
             exit 1
